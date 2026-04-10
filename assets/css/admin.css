@@ -1,0 +1,25 @@
+/**
+ * ezPayments WooCommerce - Admin Styles
+ */
+
+.woocommerce-page .ezpayments-mode-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.woocommerce-page .ezpayments-mode-badge--test {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffc107;
+}
+
+.woocommerce-page .ezpayments-mode-badge--live {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #28a745;
+}

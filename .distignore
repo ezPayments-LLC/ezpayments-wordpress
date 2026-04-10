@@ -1,0 +1,20 @@
+# Files to exclude from the distribution zip
+.distignore
+.gitignore
+.git
+.github
+node_modules
+vendor
+tests
+phpunit.xml
+phpcs.xml
+composer.json
+composer.lock
+package.json
+package-lock.json
+Makefile
+build.sh
+*.log
+*.map
+.DS_Store
+Thumbs.db
