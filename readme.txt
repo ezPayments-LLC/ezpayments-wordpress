@@ -107,6 +107,31 @@ The payment page is hosted by ezPayments and follows your merchant branding sett
 
 The plugin automatically cleans up webhook endpoints registered with ezPayments when deactivated. Your existing orders and their payment data are preserved.
 
+== External Services ==
+
+This plugin connects to the following external services:
+
+= ezPayments API =
+
+This plugin sends order data (amount, customer name, email, order reference) to the [ezPayments](https://ezpayments.co) API to create payment links and register webhook endpoints. Customer payment is processed on ezPayments' hosted payment page.
+
+* Service URL: `https://app.ezpayments.co/api/v3/`
+* [Terms of Service](https://ezpayments.co/terms)
+* [Privacy Policy](https://ezpayments.co/privacy)
+
+= Exchange Rate API =
+
+When your WooCommerce store uses a currency other than USD, this plugin fetches live exchange rates from [Exchange Rate API](https://open.er-api.com) to convert order totals to USD. Only the currency code is sent; no customer data is transmitted.
+
+* Service URL: `https://open.er-api.com/v6/latest/`
+* [Terms of Service](https://www.exchangerate-api.com/terms)
+
+= GitHub Releases API =
+
+This plugin checks [GitHub](https://github.com/ezPayments-LLC/ezpayments-wordpress/releases) for new versions to enable auto-updates. Only the current plugin version is compared; no site or user data is sent.
+
+* Service URL: `https://api.github.com/repos/ezPayments-LLC/ezpayments-wordpress/releases/latest`
+
 == Screenshots ==
 
 1. Plugin settings page with test/live mode toggle and API key fields.
