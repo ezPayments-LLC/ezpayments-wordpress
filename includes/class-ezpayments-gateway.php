@@ -144,6 +144,51 @@ class WC_Gateway_EzPayments extends WC_Payment_Gateway {
     }
 
     /**
+     * Convert an amount from a foreign currency to USD.
+     *
+     * Uses a cached exchange rate (1 hour TTL) from the Exchange Rate API.
+     *
+     * @param float  $amount   The amount to convert.
+     * @param string $currency The source currency code (e.g. "EGP", "EUR").
+     * @return float|null The converted USD amount, or null on failure.
+     */
+    private function convert_to_usd( $amount, $currency ) {
+        $cache_key = 'ezpayments_rate_' . strtoupper( $currency ) . '_USD';
+        $rate      = get_transient( $cache_key );
+
+        if ( false === $rate ) {
+            // Fetch live exchange rate.
+            $url      = 'https://open.er-api.com/v6/latest/' . strtoupper( $currency );
+            $response = wp_remote_get( $url, array( 'timeout' => 10, 'sslverify' => true ) );
+
+            if ( is_wp_error( $response ) ) {
+                wc_get_logger()->error(
+                    'ezPayments: Currency conversion failed - ' . $response->get_error_message(),
+                    array( 'source' => 'ezpayments' )
+                );
+                return null;
+            }
+
+            $body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+            if ( empty( $body['rates']['USD'] ) ) {
+                wc_get_logger()->error(
+                    'ezPayments: Currency conversion failed - no USD rate for ' . $currency,
+                    array( 'source' => 'ezpayments' )
+                );
+                return null;
+            }
+
+            $rate = (float) $body['rates']['USD'];
+
+            // Cache the rate for 1 hour.
+            set_transient( $cache_key, $rate, HOUR_IN_SECONDS );
+        }
+
+        return $amount * (float) $rate;
+    }
+
+    /**
      * Process the payment for a given order.
      *
      * Creates a payment link via the ezPayments API and redirects
@@ -191,9 +236,22 @@ class WC_Gateway_EzPayments extends WC_Payment_Gateway {
             wc_get_checkout_url()
         );
 
+        // Convert order total to USD if store uses a different currency.
+        $order_total    = (float) $order->get_total();
+        $store_currency = $order->get_currency();
+        $amount_usd     = $order_total;
+
+        if ( 'USD' !== $store_currency ) {
+            $amount_usd = $this->convert_to_usd( $order_total, $store_currency );
+            if ( null === $amount_usd ) {
+                wc_add_notice( __( 'Unable to convert currency. Please try again later.', 'ezpayments-woocommerce' ), 'error' );
+                return array( 'result' => 'failure' );
+            }
+        }
+
         // Create payment link.
         $params = array(
-            'amount'           => (float) $order->get_total(),
+            'amount'           => round( $amount_usd, 2 ),
             'description'      => $description,
             'customer_name'    => $order->get_formatted_billing_full_name(),
             'customer_email'   => $order->get_billing_email(),
@@ -201,10 +259,12 @@ class WC_Gateway_EzPayments extends WC_Payment_Gateway {
             'success_url'      => $this->get_return_url( $order ),
             'cancel_url'       => $cancel_url,
             'metadata'         => array(
-                'source'       => 'woocommerce',
-                'order_id'     => $order->get_id(),
-                'order_number' => $order->get_order_number(),
-                'site_url'     => get_site_url(),
+                'source'            => 'woocommerce',
+                'order_id'          => $order->get_id(),
+                'order_number'      => $order->get_order_number(),
+                'site_url'          => get_site_url(),
+                'original_amount'   => $order_total,
+                'original_currency' => $store_currency,
             ),
         );
 
@@ -236,6 +296,11 @@ class WC_Gateway_EzPayments extends WC_Payment_Gateway {
         $order->update_meta_data( '_ezpayments_link_id', $link_id );
         $order->update_meta_data( '_ezpayments_link_url', $link_url );
         $order->update_meta_data( '_ezpayments_mode', $this->testmode ? 'test' : 'live' );
+        if ( 'USD' !== $store_currency ) {
+            $order->update_meta_data( '_ezpayments_original_amount', $order_total );
+            $order->update_meta_data( '_ezpayments_original_currency', $store_currency );
+            $order->update_meta_data( '_ezpayments_usd_amount', round( $amount_usd, 2 ) );
+        }
 
         // Set order to on-hold to indicate awaiting off-site payment.
         $order->update_status( 'on-hold', __( 'Awaiting ezPayments payment.', 'ezpayments-woocommerce' ) );
