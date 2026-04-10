@@ -3,7 +3,7 @@
  * Plugin Name: ezPayments for WooCommerce
  * Plugin URI: https://ezpayments.co
  * Description: Accept payments via ezPayments payment links in your WooCommerce store. Supports test and live modes with automatic webhook registration.
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: ezPayments
  * Author URI: https://ezpayments.co
  * License: GPL-2.0-or-later
@@ -41,12 +41,16 @@ function ezpayments_init() {
     require_once EZPAYMENTS_PLUGIN_DIR . 'includes/class-ezpayments-api.php';
     require_once EZPAYMENTS_PLUGIN_DIR . 'includes/class-ezpayments-gateway.php';
     require_once EZPAYMENTS_PLUGIN_DIR . 'includes/class-ezpayments-webhook.php';
+    require_once EZPAYMENTS_PLUGIN_DIR . 'includes/class-ezpayments-updater.php';
 
     // Register the payment gateway.
     add_filter( 'woocommerce_payment_gateways', 'ezpayments_add_gateway' );
 
     // Initialize webhook handler.
     EzPayments_Webhook::init();
+
+    // Initialize auto-updater (checks GitHub releases).
+    EzPayments_Updater::init();
 
     // Add settings link to plugin list.
     add_filter( 'plugin_action_links_' . EZPAYMENTS_PLUGIN_BASENAME, 'ezpayments_plugin_action_links' );
