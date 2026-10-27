@@ -4,3 +4,6 @@ node_modules/
 vendor/
 *.log
 *.map
+composer.lock
+.phpunit.result.cache
+.phpunit.cache/

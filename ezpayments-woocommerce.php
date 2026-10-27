@@ -3,7 +3,7 @@
  * Plugin Name: ezPayments for WooCommerce
  * Plugin URI: https://github.com/ezPayments-LLC/ezpayments-wordpress
  * Description: Accept payments via ezPayments payment links in your WooCommerce store. Supports test and live modes with automatic webhook registration.
- * Version: 1.1.0
+ * Version: 1.1.1
  * Author: ezPayments
  * Author URI: https://ezpayments.co
  * License: GPL-2.0-or-later
@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin constants.
-define( 'EZPAYMENTS_VERSION', '1.1.0' );
+define( 'EZPAYMENTS_VERSION', '1.1.1' );
 define( 'EZPAYMENTS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EZPAYMENTS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'EZPAYMENTS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );

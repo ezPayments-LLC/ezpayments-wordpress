@@ -96,6 +96,21 @@ Yes. Card details are entered on ezPayments' hosted payment page. Your WordPress
 **What happens when I deactivate the plugin?**
 Webhook endpoints are automatically cleaned up. Existing orders and their payment data are preserved.
 
+## Development
+
+Unit tests run the webhook handler against minimal WordPress and WooCommerce stand-ins:
+
+```bash
+composer install
+composer test
+```
+
+The integration check has the ezPayments backend sign and deliver real `payment_link.paid`, `payment_link.expired` and `payment_link.cancelled` webhooks to the handler served by `php -S`. It needs a backend checkout with its virtualenv:
+
+```bash
+EZPAYMENTS_BACKEND_DIR=/path/to/ezPayments/backend composer test:integration
+```
+
 ## Support
 
 - [Report an issue](https://github.com/ezPayments-LLC/ezpayments-wordpress/issues)
