@@ -5,7 +5,7 @@ Tags: woocommerce, payment gateway, ezpayments, payments, checkout
 Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -141,6 +141,15 @@ This plugin checks [GitHub](https://github.com/ezPayments-LLC/ezpayments-wordpre
 
 == Changelog ==
 
+= 1.1.1 =
+* Fix: orders paid through ezPayments now move to Processing. The webhook handler read the event name from the request body, but ezPayments names the event in the `X-EzPayments-Event` header and sends the payment link itself as the body, so every webhook was rejected and orders stayed On hold. Bodies wrapped as `{"event_type": ..., "data": ...}` are still accepted.
+* Fix: a webhook is ignored when the payment link status in its signed body does not match the event, so an order cannot be marked paid by a body that is not a paid payment link.
+* Fix: the `EZPAYMENTS_VERSION` constant now matches the plugin version, so the updater no longer reports an update that is already installed.
+
+= 1.1.0 =
+* Automatic updates from GitHub releases.
+* Non-USD order totals are converted to USD before the payment link is created.
+
 = 1.0.0 =
 * Initial release.
 * WooCommerce payment gateway integration via ezPayments V3 API.
@@ -154,6 +163,9 @@ This plugin checks [GitHub](https://github.com/ezPayments-LLC/ezpayments-wordpre
 * Idempotent webhook processing to prevent duplicate order updates.
 
 == Upgrade Notice ==
+
+= 1.1.1 =
+Required update: earlier versions reject ezPayments webhooks, so paid orders stay On hold. After updating, check On hold orders paid through ezPayments and complete them.
 
 = 1.0.0 =
 Initial release of ezPayments for WooCommerce.

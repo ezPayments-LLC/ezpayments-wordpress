@@ -93,15 +93,25 @@ class EzPayments_Webhook {
 
         // Parse payload.
         $payload = json_decode( $raw_body, true );
-        if ( null === $payload && json_last_error() !== JSON_ERROR_NONE ) {
+        if ( ! is_array( $payload ) || empty( $payload ) ) {
             return new WP_REST_Response( array( 'error' => 'Invalid JSON payload' ), 400 );
         }
-        if ( empty( $payload ) || ! isset( $payload['event_type'] ) ) {
-            return new WP_REST_Response( array( 'error' => 'Invalid payload' ), 400 );
+
+        list( $event_type, $event_data ) = self::parse_event( $request->get_header( 'X-EzPayments-Event' ), $payload );
+
+        if ( '' === $event_type ) {
+            return new WP_REST_Response( array( 'error' => 'Missing event type' ), 400 );
         }
 
-        $event_type = sanitize_text_field( $payload['event_type'] );
-        $event_data = isset( $payload['data'] ) && is_array( $payload['data'] ) ? $payload['data'] : array();
+        // The event header is not covered by the signature, so a signed body
+        // replayed under a different event name must not change the outcome.
+        if ( ! self::status_matches_event( $event_type, $event_data ) ) {
+            wc_get_logger()->warning(
+                'ezPayments: Webhook event ' . $event_type . ' does not match the payment link status. Ignored.',
+                array( 'source' => 'ezpayments' )
+            );
+            return new WP_REST_Response( array( 'received' => true ), 200 );
+        }
 
         // Dispatch event.
         switch ( $event_type ) {
@@ -123,6 +133,64 @@ class EzPayments_Webhook {
         }
 
         return new WP_REST_Response( array( 'received' => true ), 200 );
+    }
+
+    /**
+     * Resolve the event type and the event object from a delivery.
+     *
+     * ezPayments sends the event object itself as the body and names the
+     * event in the X-EzPayments-Event header. A body wrapped as
+     * {"event_type": ..., "data": {...}} is still accepted.
+     *
+     * @param string|null $header_event The X-EzPayments-Event header value.
+     * @param array       $payload      The decoded request body.
+     * @return array { 0: string event type, 1: array event data }
+     */
+    private static function parse_event( $header_event, $payload ) {
+        $is_envelope = isset( $payload['event_type'] ) && isset( $payload['data'] ) && is_array( $payload['data'] );
+
+        if ( is_string( $header_event ) && '' !== trim( $header_event ) ) {
+            $event_type = $header_event;
+        } elseif ( $is_envelope ) {
+            $event_type = $payload['event_type'];
+        } else {
+            $event_type = '';
+        }
+
+        $event_type = is_string( $event_type ) ? sanitize_text_field( $event_type ) : '';
+        $event_data = $is_envelope ? $payload['data'] : $payload;
+
+        return array( $event_type, $event_data );
+    }
+
+    /**
+     * Check the payment link status in the body agrees with the event.
+     *
+     * A payment_link.paid event requires a body whose status is "paid".
+     * For the other events a status, when present, must match the event.
+     *
+     * @param string $event_type The event type.
+     * @param array  $data       The event data.
+     * @return bool
+     */
+    private static function status_matches_event( $event_type, $data ) {
+        $expected = array(
+            'payment_link.paid'      => 'paid',
+            'payment_link.expired'   => 'expired',
+            'payment_link.cancelled' => 'cancelled',
+        );
+
+        if ( ! isset( $expected[ $event_type ] ) ) {
+            return true;
+        }
+
+        $status = isset( $data['status'] ) && is_string( $data['status'] ) ? $data['status'] : null;
+
+        if ( 'payment_link.paid' === $event_type ) {
+            return 'paid' === $status;
+        }
+
+        return null === $status || $expected[ $event_type ] === $status;
     }
 
     /**
